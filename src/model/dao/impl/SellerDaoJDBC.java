@@ -59,8 +59,10 @@ public class SellerDaoJDBC implements SellerDao{
 			return null;
 		}catch(SQLException e) { // tratando ecessões 
 			throw new DbException(e.getMessage());
+		}finally {
+			DB.closeResultSet(rs);
+			DB.closeStatement(st);
 		}
-		
 	}
 
 	private Seller instatiateSeller(ResultSet rs, Departament dep) throws SQLException{ // propagando excessão
@@ -84,7 +86,34 @@ public class SellerDaoJDBC implements SellerDao{
 
 	@Override
 	public List<Seller> findAll() {
-		return null;
+		PreparedStatement st = null;
+		ResultSet rs = null;
+		try {
+			st = conn.prepareStatement(
+					"SELECT seller.*,  department.Name as DepName "
+					+"FROM seller INNER JOIN department "
+					+"ON seller.DepartmentId = department.Id "
+					+"ORDER BY Name");
+			rs = st.executeQuery();
+			List<Seller> list = new ArrayList<>();
+			Map<Integer, Departament> map = new HashMap();
+			
+			while (rs.next()) { 
+				Departament dep1 = map.get(rs.getInt("DepartmentId"));
+				if(dep1 == null) {
+					dep1 = instantiateDepartment(rs);
+					map.put(rs.getInt("DepartmentId"), dep1); // salvo department no map quando não achar o resultando
+				}
+				Seller obj = instatiateSeller(rs, dep1);
+				list.add(obj);
+			}
+			return list;
+		}catch(SQLException e) { // tratando ecessões 
+			throw new DbException(e.getMessage());
+		}finally {
+			DB.closeResultSet(rs);
+			DB.closeStatement(st);
+		}
 	}
 
 	@Override
@@ -107,7 +136,7 @@ public class SellerDaoJDBC implements SellerDao{
 				Departament dep1 = map.get(rs.getInt("DepartmentId"));
 				if(dep1 == null) {
 					dep1 = instantiateDepartment(rs);
-					map.put(rs.getInt("DepartmentId"), dep1); // saldo department no map quando não achar o resultando
+					map.put(rs.getInt("DepartmentId"), dep1); // salvo department no map quando não achar o resultando
 				}
 				Seller obj = instatiateSeller(rs, dep1);
 				list.add(obj);
